@@ -1,0 +1,103 @@
+# ndak: a local Nostr test bed. Five relays, the Relay Window UI and the nak agent, one command.
+#
+#   docker compose up -d                          start everything, then open http://localhost:7778/
+#   docker compose --profile seed run --rm seed   optional, once: demo identities and sample events
+#   docker compose down                           stop; add -v to also delete the relay data
+#
+# Ports, all on this machine's loopback address only: 7777 rnostr · 7778 UI · 7779 nostr-rs-relay · 7780 strfry · 7781 obelisk-relay · 7782 khatru · 7790 agent
+
+services:
+  ui:                                  # the page, static files behind nginx
+    image: nginx:1.30.5-alpine
+    restart: unless-stopped
+    ports: ["127.0.0.1:7778:80"]
+    volumes:
+      - ./ui:/usr/share/nginx/html:ro
+      - ./nginx/ui.conf:/etc/nginx/conf.d/default.conf:ro
+
+  agent:                               # runs nak and jq for the terminal, holds the identity keys
+    build: ./agent
+    image: ndak/agent:local
+    restart: unless-stopped
+    ports: ["127.0.0.1:7790:7790"]     # the page talks to it from http://localhost:7778
+    environment:
+      RELAY_MAP: ${RELAY_MAP:-7777=rnostr:8080,7779=nostr-rs-relay:8080,7780=strfry:7777,7781=obelisk-relay:8080,7782=khatru:3334}
+      RELAY_HOST: host.docker.internal # any other "localhost" port: a relay you run on this machine yourself
+      UI_ORIGIN: http://localhost:7778,http://127.0.0.1:7778
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: ["./identities:/identities"]
+
+  seed:                                # optional, once: three demo identities and a small conversation
+    profiles: ["seed"]
+    build: ./agent
+    image: ndak/agent:local
+    command: ["node", "seed.js"]
+    healthcheck: { disable: true }
+    environment:
+      RELAY_MAP: ${RELAY_MAP:-7777=rnostr:8080,7779=nostr-rs-relay:8080,7780=strfry:7777,7781=obelisk-relay:8080,7782=khatru:3334}
+    volumes: ["./identities:/identities"]
+
+  rnostr:                              # github.com/rnostr/rnostr: many NIPs, COUNT and search
+    image: rnostr/rnostr:v0.4.9
+    platform: linux/amd64              # no arm64 image is published; runs under emulation on Apple Silicon
+    restart: unless-stopped
+    ports: ["127.0.0.1:7777:8080"]
+    volumes:
+      - ./relays/rnostr/rnostr.toml:/rnostr/config/rnostr.toml:ro
+      - rnostr-data:/rnostr/data
+    environment: [RUST_LOG=info]
+
+  nostr-rs-relay:                      # github.com/scsibug/nostr-rs-relay: reference behaviour, drops ephemeral events after delivery
+    image: scsibug/nostr-rs-relay:0.10.0
+    platform: linux/amd64
+    restart: unless-stopped
+    ports: ["127.0.0.1:7779:8080"]
+    volumes:
+      - ./relays/nostr-rs-relay/config.toml:/usr/src/app/config.toml:ro
+      - nostr-rs-relay-data:/usr/src/app/db
+
+  strfry:                              # github.com/hoytech/strfry: NIP-42 AUTH, NIP-45 COUNT, NIP-77 negentropy sync
+    image: ghcr.io/hoytech/strfry:latest@sha256:36f1886d185a88ca57c66ebe52e6e9e8428dac2486eea0a5d50ff934f18b60c3
+    restart: unless-stopped
+    ports: ["127.0.0.1:7780:7777"]
+    volumes:
+      - ./relays/strfry/strfry.conf:/app/strfry.conf:ro
+      - strfry-data:/app/strfry-db
+
+  obelisk-init:                        # gives this install its own relay key for obelisk, once
+    image: ndak/agent:local
+    build: ./agent
+    healthcheck: { disable: true }
+    entrypoint: ["sh", "-c"]
+    command: ["test -f /config/settings.local.yml || printf 'relay:\\n  relay_secret_key: \"%s\"\\n' \"$(nak key generate)\" > /config/settings.local.yml"]
+    volumes: ["./relays/obelisk:/config"]
+
+  obelisk-relay:                       # github.com/obelisk-app/obelisk-relay: NIP-29 groups with subgroups, NIP-42, NIP-50
+    image: ghcr.io/obelisk-app/obelisk-relay:v2026.09.15-observability
+    restart: unless-stopped
+    depends_on:
+      obelisk-init: { condition: service_completed_successfully }
+    ports: ["127.0.0.1:7781:8080"]
+    volumes:
+      - ./relays/obelisk:/app/config
+      - obelisk-data:/app/db
+    environment:
+      RUST_LOG: info
+      NIP29__relay__relay_url: "ws://localhost:7781"
+
+  khatru:                              # fiatjaf.com/nostr/khatru: a small relay built from source with one custom policy (relays/khatru/main.go)
+    build: ./relays/khatru
+    image: ndak/khatru:local
+    restart: unless-stopped
+    ports: ["127.0.0.1:7782:3334"]
+    volumes: ["khatru-data:/data"]
+    environment:
+      DATA_PATH: /data
+      PORT: "3334"
+
+volumes:
+  rnostr-data:
+  nostr-rs-relay-data:
+  strfry-data:
+  obelisk-data:
+  khatru-data:

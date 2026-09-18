@@ -1,0 +1,14 @@
+# keys and anything else the agent writes
+identities/*
+!identities/README.md
+
+# obelisk writes next to its config: this install's relay key and its storage history
+relays/obelisk/settings.local.yml
+relays/obelisk/storage-history.json
+
+# relay data lives in Docker volumes; never in the tree
+relays/*/data/
+relays/*/db/
+
+.DS_Store
+node_modules/

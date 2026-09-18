@@ -1,0 +1,6 @@
+{
+  "name": "ndak-agent",
+  "private": true,
+  "type": "module",
+  "description": "Runs nak and jq for the Relay Window terminal and holds the identity keys."
+}

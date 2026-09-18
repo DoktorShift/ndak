@@ -1,0 +1,9 @@
+{
+  "name": "ndak",
+  "private": true,
+  "type": "module",
+  "description": "Local Nostr test bed: five relays, the Relay Window UI and a nak agent in Docker.",
+  "scripts": {
+    "check": "for f in ui/js/*.js ui/js/views/*.js agent/*.js; do node --check \"$f\" || exit 1; done && echo ok"
+  }
+}

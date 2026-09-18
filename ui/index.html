@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Relay Window</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23007AFF'/%3E%3Ccircle cx='16' cy='16' r='5' fill='white'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='white' stroke-width='2' opacity='.6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<!-- Toolbar: leading = navigation and relay, centre = window switcher, trailing = search and view controls (macOS HIG). -->
+<div class="toolbar" role="toolbar" aria-label="Relay Window">
+  <div class="lead">
+    <button class="tb" id="sbToggle" title="Hide or show sidebar (S)" aria-pressed="true"><svg class="sym" viewBox="0 0 16 16"><rect x="1.5" y="3" width="13" height="10" rx="2"/><path d="M6 3v10"/></svg></button>
+    <button class="popup" id="relayBtn" data-action="relay-menu" aria-haspopup="menu" title="Switch relay (R)"><span class="dot" id="dot"></span><span class="lbl" id="relayName">relay</span><svg class="sym chev" viewBox="0 0 16 16" style="width:12px;height:12px"><path d="m4 6 4 4 4-4"/></svg></button>
+    <button class="livepill" id="liveBtn" aria-pressed="true" title="Pause the timeline while you inspect"><span class="dot on"></span><span id="liveLabel">Live</span><svg class="sym glyph pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9"/></svg><svg class="sym glyph play" viewBox="0 0 16 16"><path d="M5 3.5v9l7-4.5z"/></svg></button>
+    <button class="popup none" id="actBtn" data-action="act-menu" aria-haspopup="menu" title="Which identity signs write commands (A)"><svg class="sym" viewBox="0 0 16 16"><circle cx="8" cy="5.5" r="2.7"/><path d="M2.5 14c.7-3 2.8-4.5 5.5-4.5s4.8 1.5 5.5 4.5"/></svg><span class="lbl" id="actName">No identity</span><svg class="sym chev" viewBox="0 0 16 16" style="width:12px;height:12px"><path d="m4 6 4 4 4-4"/></svg></button>
+    <span class="status" id="state">not connected</span>
+  </div>
+  <div class="seg" role="group" aria-label="Window">
+    <button id="tabSocial" aria-pressed="true"><svg class="sym" viewBox="0 0 16 16"><circle cx="8" cy="5.5" r="2.7"/><path d="M2.5 14c.7-3 2.8-4.5 5.5-4.5s4.8 1.5 5.5 4.5"/></svg>Social</button>
+    <button id="tabTech" aria-pressed="false"><svg class="sym" viewBox="0 0 16 16"><path d="M5 5 2 8l3 3M11 5l3 3-3 3M9.5 3l-3 10"/></svg>Technical</button>
+  </div>
+  <div class="trail">
+    <label class="search" id="searchBox"><svg class="sym" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><input id="search" type="text" placeholder="Search or filter" aria-label="Search events, people, tags (/)" title="Tokens: kind:1 author:name id:hex #t:tag relay:strfry since:2h until:2026-09-18 nip:56, plus free text"><button class="x" id="searchClear" aria-label="Clear search">✕</button></label>
+    <button class="tb" id="detailsBtn" title="Show or hide the details panel (I)" aria-pressed="false"><svg class="sym" viewBox="0 0 16 16"><rect x="1.5" y="3" width="13" height="10" rx="2"/><path d="M10 3v10"/></svg>Details</button>
+    <button class="tb" id="terminalBtn" title="nak terminal (T)" aria-pressed="false"><svg class="sym" viewBox="0 0 16 16"><rect x="1.5" y="3" width="13" height="10" rx="2"/><path d="m4.5 6.5 2 1.5-2 1.5M8 10h3.5"/></svg>Terminal</button>
+    <button class="tb" id="settingsBtn" title="Settings (,)"><svg class="sym" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg></button>
+    <button class="tb" id="helpBtn" title="Help (?)"><svg class="sym" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.3a1.9 1.9 0 1 1 2.6 1.8c-.6.3-.8.6-.8 1.2M8 11.6v.1"/></svg></button>
+  </div>
+</div>
+
+<div class="split" id="split">
+  <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+    <label class="filter" id="sbFilterBox"><svg class="sym" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><input id="sbFilter" type="text" placeholder="Filter" aria-label="Filter the sidebar" autocomplete="off" spellcheck="false"><button class="x" data-action="sb-clear" aria-label="Clear filter">✕</button></label>
+    <div class="sb-scroll" id="sbScroll"></div>
+  </aside>
+  <div class="resizer" id="sbResize" title="Drag to resize the sidebar" aria-hidden="true"></div>
+  <main id="main">
+    <div id="social" class="window active">
+      <div class="feedwrap" id="feedwrap"><div class="progress" id="progress" style="display:none"><i></i></div><div class="feed" id="feed"></div></div>
+      <aside class="detail inspector" id="detail" aria-label="Details"></aside>
+      <div class="resizer right" id="detailResize" title="Drag to resize the details panel" aria-hidden="true"></div>
+    </div>
+    <div id="technical" class="window"><div class="tech">
+      <div class="tablewrap">
+        <div class="tbar"><span id="count"></span><span class="spacer"></span><button class="tb" id="queryBtn" data-action="query" title="Query relays with a filter and compare what they return (Q)"><svg class="sym" viewBox="0 0 16 16"><path d="M2.5 3.5h11l-4 5v4l-3 1.5v-5.5z"/></svg>Query…</button><button class="tb" data-action="import" title="Import events from a JSON Lines file"><svg class="sym" viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M3 9v4h10V9"/></svg>Import…</button><input type="file" id="importFile" accept=".jsonl,.json,.txt" hidden><button class="tb" id="export" title="Save everything loaded as JSON Lines"><svg class="sym" viewBox="0 0 16 16"><path d="M8 10V2M5 5l3-3 3 3M3 9v4h10V9"/></svg>Export</button><button class="tb" id="clear" title="Empty the list in this window"><svg class="sym" viewBox="0 0 16 16"><path d="M3 4h10M6 4V2.5h4V4M4.5 4l.7 9h5.6l.7-9"/></svg>Clear…</button></div>
+        <table aria-label="Events"><thead><tr id="thead"></tr></thead><tbody id="rows"></tbody></table>
+      </div>
+      <div class="inspector" id="inspector"></div>
+      <div class="resizer right" id="inspResize" title="Drag to resize the inspector" aria-hidden="true"></div>
+    </div></div>
+    <section class="terminal" id="terminal" hidden aria-label="nak terminal">
+      <div class="resizer-h" id="termResize" title="Drag to resize; double-click the header to maximize"></div>
+      <header class="thd"><span class="tid"><span class="tdot" id="termDot"></span><span class="ttitle">nak</span><span class="tmeta" id="termMeta"></span><button class="tipmark" data-action="tip" data-tip="terminal" aria-label="About the terminal">?</button></span><span class="spacer"></span><span class="tsearch" id="termSearch" hidden><svg class="sym" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><input id="termFind" type="text" placeholder="Find" aria-label="Find in output" autocomplete="off" spellcheck="false"><span class="tcount" id="termFindCount"></span><button class="iconbtn small" data-action="term-find-close" aria-label="Close find">✕</button></span><button class="iconbtn" data-action="term-menu" title="More" aria-haspopup="menu">···</button><button class="iconbtn" data-action="term-close" title="Close (T)">✕</button></header>
+      <div class="tout" id="termOut" role="log" aria-live="polite"></div>
+      <button class="tnew" id="termNew" hidden data-action="term-bottom">↓ New output</button>
+      <div class="tin" id="termIn"><span class="prompt" aria-hidden="true">❯</span><input id="termInput" type="text" placeholder="nak …" aria-label="Command" autocomplete="off" spellcheck="false" autocapitalize="off"></div>
+    </section>
+  </main>
+</div>
+
+<div id="tour" hidden aria-live="polite"><div class="tveil" id="tourVeil"></div><div class="tspot" id="tourSpot" hidden></div><div class="tcard" id="tourCard" role="dialog" aria-label="Guided tour"></div></div>
+<div class="popover" id="popover" role="dialog"></div>
+<div class="menu" id="menu" role="menu"></div>
+<div class="notifs" id="notifs" aria-live="polite"></div>
+<dialog id="alert"><div class="alert" id="alertBody"></div></dialog>
+<dialog id="lightbox" class="lightbox" aria-label="Image"><img alt=""><button class="iconbtn close" data-action="lightbox-close" aria-label="Close">✕</button></dialog>
+<dialog id="sheet" class="sheet" aria-labelledby="sheetTitle"><div class="hd"><span class="hd-side"></span><span id="sheetTitle">Settings</span><button id="sheetDone" class="hd-side">Done</button></div><div class="bd" id="sheetBody"></div><div class="ft" id="sheetFoot" hidden></div></dialog>
+
+<script src="js/vendor/nostr.bundle.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

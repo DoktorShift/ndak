@@ -1,0 +1,41 @@
+# rnostr for the nostr-gate live set. Client URL: ws://localhost:7777
+[information]
+name = "rnostr"
+description = "rnostr/rnostr · local test relay"
+software = "https://github.com/rnostr/rnostr"
+
+[data]
+path = "./data"
+db_query_timeout = "100ms"
+
+[network]
+host = "0.0.0.0"
+port = 8080
+
+[limitation]
+max_message_length = 524288
+max_subscriptions = 20
+max_filters = 10
+# our viewer asks for up to 2000 stored events; the relay clamps REQ limits to this
+max_limit = 2000
+max_subid_length = 100
+min_prefix = 10
+max_event_tags = 5000
+max_event_time_older_than_now = 94608000
+# same 15 minute future skew a public relay applies (see nostr_sub issue #35)
+max_event_time_newer_than_now = 900
+
+# NIP-42 AUTH is off for the first round. Turn it on and add [auth.req] / [auth.event]
+# rules to model members-only relays and the NIP-17 rule for kind 1059.
+[auth]
+enabled = false
+
+[rate_limiter]
+enabled = false
+
+# NIP-45 COUNT and NIP-50 search, both used by the viewer
+[count]
+enabled = true
+
+[search]
+enabled = true

@@ -1,0 +1,28 @@
+# Local test relay for the nostr-gate live set. Client URL: ws://localhost:7777
+[info]
+relay_url = "ws://localhost:7779/"
+name = "nostr-rs-relay"
+description = "scsibug/nostr-rs-relay · local test relay"
+
+[database]
+data_directory = "/usr/src/app/db"
+engine = "sqlite"
+
+[network]
+address = "0.0.0.0"
+port = 8080
+
+[options]
+# Same default a public relay uses: events dated more than 30 minutes ahead are rejected.
+reject_future_seconds = 1800
+
+[limits]
+# No rate limits on the test relay; flip these on to model a strict public relay.
+max_event_bytes = 131072
+max_ws_message_bytes = 131072
+
+[authorization]
+# Off for the first round. Set both true to model the NIP-17 rule that
+# kind 1059 is only served to the tagged recipient after NIP-42 AUTH.
+nip42_auth = false
+nip42_dms = false
