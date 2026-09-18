@@ -53,6 +53,7 @@ export const store = {
   refs: new Map(),       // referenced id or address -> Set of event ids that point at it (e, a, q tags)
   relayInfo: new Map(),  // url -> NIP-11 document (or null when unavailable)
   log: new Map(),        // url -> protocol messages other than EVENT, newest last
+  opened: new Map(),     // event id -> decrypted layers from the agent, this session only
   identities: [],        // [{ name, pubkey, source }] from the agent; never a secret
 };
 export const revealed = new Set();   // content-warning posts the reader opened
@@ -80,7 +81,7 @@ export function addEvent(ev, fresh, url = 'import') {
 }
 export function removeEvent(id) {
   const ev = store.events.get(id); if (!ev) return;
-  store.events.delete(id);
+  store.events.delete(id); store.opened.delete(id);
   const n = store.counts.get(ev.kind) - 1; n ? store.counts.set(ev.kind, n) : store.counts.delete(ev.kind);
   for (const t of ev.tags) if ((t[0] === 'e' || t[0] === 'a' || t[0] === 'q') && t[1]) { const set = store.refs.get(t[1]); if (set) { set.delete(id); if (!set.size) store.refs.delete(t[1]); } }
   if (ev.kind === 37001 && store.tiers.get(address(ev)) === ev) store.tiers.delete(address(ev));
@@ -92,7 +93,7 @@ export function removeEvent(id) {
 function evict(n) {
   for (const id of [...store.events.keys()]) { if (n <= 0) break; if (id === ui.selected || id === ui.detailId) continue; removeEvent(id); n--; }
 }
-export function clearStore() { for (const m of [store.events, store.counts, store.profiles, store.tiers, store.byTarget, store.refs]) m.clear(); }
+export function clearStore() { for (const m of [store.events, store.counts, store.profiles, store.tiers, store.byTarget, store.refs, store.opened]) m.clear(); }
 
 function indexEvent(ev) {
   if (ev.kind === 0) {

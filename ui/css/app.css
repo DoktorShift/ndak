@@ -606,3 +606,57 @@ span.ok { color: var(--green-ink); } span.no { color: var(--red); }
 .help .tour p { margin: 0; font-size: 12.5px; line-height: 1.4; }
 .help .tour .show { justify-self: start; border: 0; background: transparent; color: var(--blue); font: 500 12.5px var(--sans); padding: 2px 0; }
 .help .tour .show:hover { text-decoration: underline; }
+
+/* ---------- sealed content ---------- */
+.sealedtext { margin: 0; font: 11.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg3); border-radius: 6px; padding: 7px 9px; max-height: 260px; overflow: auto; }
+.copy.primary { background: var(--blue); color: #fff; } .copy.primary:hover { background: color-mix(in srgb, var(--blue) 85%, #000); }
+.chip.warn { color: var(--orange); background: color-mix(in srgb, var(--orange) 14%, transparent); }
+
+/* ---------- scenarios sheet ---------- */
+.scen { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; min-height: 380px; }
+.slist { display: flex; flex-direction: column; gap: 4px; align-self: start; position: sticky; top: 0; }
+.scen-head { position: sticky; top: 0; z-index: 2; background: var(--bg2); padding-bottom: 4px; }
+.srow { display: flex; flex-direction: column; gap: 3px; text-align: left; border: 0; background: var(--bg3); border-radius: 10px; padding: 10px 12px; color: var(--label); }
+.srow:hover { background: var(--fill2); } .srow[aria-pressed="true"] { background: var(--blue); color: #fff; } .srow[aria-pressed="true"] .ss, .srow[aria-pressed="true"] .sm { color: rgba(255,255,255,.82); }
+.srow .st { font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; } .srow .ss { font-size: 12px; color: var(--label2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .srow .sm { font-size: 11.5px; color: var(--label2); }
+.sres { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.25); white-space: nowrap; }
+.srow[aria-pressed="false"] .sres.ok { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green-ink); } .srow[aria-pressed="false"] .sres.no { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+.scen-head h3 { margin: 0 0 4px; font-size: 17px; display: flex; align-items: center; gap: 6px; } .scen-head .hint { margin: 0 0 12px; }
+.scen .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0; } .qrelays { border: 1px solid var(--sep); border-radius: 8px; overflow: hidden; }
+.smatrixwrap { border: 1px solid var(--sep); border-radius: 8px; }
+.smatrix .cell { text-align: center; width: 76px; font-variant-numeric: tabular-nums; } .smatrix .cell .g { font-weight: 700; } .smatrix .cell small { display: block; font-size: 10.5px; color: var(--label2); }
+.smatrix .cell.ok .g { color: var(--green-ink); } .smatrix .cell.no .g { color: var(--red); } .smatrix .cell.obs .g, .smatrix .cell.none { color: var(--label2); }
+.smatrix .st { font-weight: 500; white-space: normal; } .smatrix .sm { font-size: 11.5px; color: var(--label2); white-space: normal; }
+.smatrix tr.failed > td:first-child { box-shadow: inset 3px 0 0 var(--red); } .smatrix tr.running > td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+.sdet { margin: 6px 0; border: 1px solid var(--sep); border-radius: 8px; padding: 4px 10px; } .sdet summary { font-weight: 600; font-size: 12.5px; padding: 4px 0; cursor: default; } .sdet summary .hint { font-weight: 400; margin-left: 6px; }
+.schecks { width: 100%; font-size: 12px; margin: 4px 0 6px; } .schecks td { padding: 4px 6px; border-bottom: 1px solid var(--sep); white-space: normal; vertical-align: top; } .schecks tr:last-child td { border-bottom: 0; }
+.schecks tr.no td:first-child { color: var(--red); font-weight: 600; } .schecks tr.ok td:first-child { color: var(--green-ink); } .schecks tr.obs td { color: var(--label2); }
+
+/* ---------- scenario editor ---------- */
+.scen-actions { display: inline-flex; gap: 4px; }
+.slegend { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 18px; } .slegend b { font-weight: 700; } .slegend b.ok { color: var(--green-ink); } .slegend b.no { color: var(--red); }
+.smatrix th.opens { border-left: 1px solid var(--sep); } .smatrix td.cell:last-child { border-left: 1px solid var(--sep); }
+.smatrix .linkbtn { color: var(--blue); }
+.schecks th { position: static; font-size: 11px; padding: 4px 6px; color: var(--label2); }
+.chip.act { background: var(--blue); color: #fff; } .chip.act:hover { background: color-mix(in srgb, var(--blue) 85%, #000); }
+.tagline { font-size: 12px; padding: 2px 0; }
+.srow.new, .srow.draft { background: transparent; color: var(--blue); font-weight: 500; } .srow.new:hover, .srow.draft:hover { background: var(--fill); } .srow.draft { color: var(--orange); }
+.sed { display: flex; flex-direction: column; gap: 4px; padding: 4px 14px 14px; }
+.sed-grid { display: grid; grid-template-columns: 1fr 220px; gap: 10px 14px; margin-bottom: 8px; } .sed .span { grid-column: 1 / -1; }
+.sed label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--label2); }
+.sed input[type="text"], .sed input[type="number"], .sed textarea, .sed select { font: 13px var(--sans); color: var(--label); background: var(--fill); border: 0; border-radius: 6px; padding: 6px 8px; min-width: 0; }
+.sed textarea { font: 12px/1.5 var(--mono); resize: vertical; } .sed input.bad { box-shadow: inset 0 0 0 1.5px var(--red); }
+.sed-ids { background: var(--bg3); border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; } .sed-newid { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; } .sed-newid input { flex: 1; min-width: 200px; }
+.sed-step { background: var(--bg3); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.sed-step-h { display: flex; align-items: center; gap: 8px; } .sed-step-h input { flex: 1; } .sed-step-h .asl { flex-direction: row; align-items: center; gap: 6px; white-space: nowrap; }
+.sed-step-b { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-top: 10px; } .sed-step-b .stepid { flex-direction: row; align-items: center; gap: 6px; grid-column: 1 / -1; } .sed-step-b .stepid input { width: 140px; }
+.sed-ev { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; } .sed-ev .kindlbl { font-size: 12px; }
+.sed-tags .lbl, .sed-expects .lbl { display: block; font-size: 12px; color: var(--label2); margin-bottom: 4px; }
+.sed-tag { display: flex; gap: 6px; margin-bottom: 4px; } .sed-tag input { flex: 1; font-family: var(--mono); font-size: 12px; }
+.sed-expects { display: grid; gap: 4px; } .sed-exp { border: 1px solid var(--sep); border-radius: 8px; padding: 6px 10px; }
+.sed-exp .exh { flex-direction: row; align-items: center; gap: 8px; color: var(--label); font-size: 13px; } .sed-exp .exh .hint { font-size: 11.5px; }
+.sed-exp .exb { margin-top: 6px; display: grid; gap: 6px; } .sed-exp .exb > label { flex-direction: row; align-items: center; gap: 6px; }
+.sed-relays { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; padding-top: 6px; } .sed-relays label { flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; }
+.sed-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sed-json textarea { width: 100%; box-sizing: border-box; }
+

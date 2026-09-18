@@ -7,7 +7,7 @@ FROM node:24-alpine
 RUN apk add --no-cache jq
 COPY --from=nak /go/bin/nak /usr/local/bin/nak
 WORKDIR /app
-COPY package.json agent.js seed.js keys.js ./
+COPY package.json *.js ./
 ENV HOST=0.0.0.0 PORT=7790 IDENTITIES_DIR=/identities NODE_ENV=production
 USER node
 EXPOSE 7790

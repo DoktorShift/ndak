@@ -1,0 +1,23 @@
+{
+  "id": "subscription-flow",
+  "title": "Subscription flow",
+  "summary": "A creator publishes a tier, a subscriber subscribes, the platform issues a receipt; then a content key travels sealed to the subscriber, and khatru rejects the same key sent in the clear.",
+  "identities": ["creator", "subscriber", "platform"],
+  "steps": [
+    { "id": "tier", "title": "Creator publishes the Gold tier", "as": "creator",
+      "event": { "kind": 37001, "content": "Weekly essays, a private relay, and early access.", "tags": [["d", "gold"], ["title", "Gold"], ["amount", "21000000", "msats", "monthly"], ["perk", "Weekly essays"], ["perk", "Private relay"], ["gate_v", "0.5.0"]] },
+      "expect": { "accepted": true, "stored": true } },
+    { "id": "subscribe", "title": "Subscriber subscribes to it", "as": "subscriber",
+      "event": { "kind": 7001, "content": "", "tags": [["p", "$creator"], ["a", "$tier.address"], ["amount", "21000000", "msats", "monthly"], ["gate_v", "0.5.0"]] },
+      "expect": { "accepted": true, "stored": true } },
+    { "id": "receipt", "title": "Platform issues the receipt", "as": "platform",
+      "event": { "kind": 7003, "content": "", "tags": [["p", "$creator"], ["P", "$subscriber"], ["valid", "$now", "$now+30d"], ["tier", "gold"], ["a", "$tier.address"], ["gate_v", "0.5.0"]] },
+      "expect": { "accepted": true, "stored": true, "count": { "filter": { "kinds": [7003], "#P": ["$subscriber"] }, "min": 1 } } },
+    { "id": "key-sealed", "title": "Content key delivered sealed to the subscriber", "as": "creator",
+      "wrap": { "to": "subscriber", "rumor": { "kind": 21088, "content": "{\"tier\":\"gold\",\"epoch\":\"2026-09\",\"key\":\"scenario-demo-key\"}", "tags": [["p", "$subscriber"], ["a", "$tier.address"]] } },
+      "expect": { "accepted": true, "stored": { "default": true, "strfry": false }, "opens_as": "subscriber", "kind": 21088 } },
+    { "id": "key-clear", "title": "The same key in the clear: khatru must refuse it", "as": "creator",
+      "event": { "kind": 21088, "content": "{\"tier\":\"gold\",\"epoch\":\"2026-09\",\"key\":\"scenario-demo-key\"}", "tags": [["p", "$subscriber"]] },
+      "expect": { "accepted": { "default": true, "khatru": false } } }
+  ]
+}

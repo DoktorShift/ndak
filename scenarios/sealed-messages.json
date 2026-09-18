@@ -1,0 +1,17 @@
+{
+  "id": "sealed-messages",
+  "title": "Sealed messages",
+  "summary": "An old-style encrypted DM, a gift-wrapped modern one, and a bare seal that no relay should accept: what each relay stores, and what a held key can open.",
+  "identities": ["creator", "subscriber"],
+  "steps": [
+    { "id": "dm-nip04", "title": "NIP-04 direct message to the subscriber", "as": "creator",
+      "event": { "kind": 4, "content": "Hello from an old-style encrypted DM. Both keys can open this one.", "tags": [["p", "$subscriber"]] }, "encrypt": "nip04",
+      "expect": { "accepted": true, "stored": { "default": true, "strfry": false }, "opens_as": "subscriber" } },
+    { "id": "dm-wrapped", "title": "Gift-wrapped message (NIP-59) to the subscriber", "as": "creator",
+      "wrap": { "to": "subscriber", "rumor": { "kind": 14, "content": "Hello from inside a gift wrap. Only the subscriber's key opens this.", "tags": [["p", "$subscriber"]] } },
+      "expect": { "accepted": true, "stored": { "default": true, "strfry": false }, "opens_as": "subscriber", "kind": 14 } },
+    { "id": "seal-alone", "title": "A bare seal (kind 13) must not be accepted by khatru", "as": "creator",
+      "event": { "kind": 13, "content": "not really a seal", "tags": [] },
+      "expect": { "accepted": { "default": true, "khatru": false } } }
+  ]
+}

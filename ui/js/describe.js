@@ -1,7 +1,9 @@
 // Turns one event into a plain-language sentence with optional body, media, card and pills for the social window.
 import { tag, tagRow, tags, address, replyTo, targetOf, isEphemeral, decodeCode } from './nostr.js';
 import { esc, safeJson, shortHex, fmtDate, amountText, bolt11Sats, untilText, mdLite, isImageUrl, plural } from './format.js';
-import { ALARM, kindInfo } from './kinds.js';
+import { ALARM, kindInfo, label } from './kinds.js';
+import { isSealed, holders, opened } from './sealed.js';
+import { identityProfile } from './identities.js';
 import { store, settings, expanded, tierTitle, allEvents } from './state.js';
 import { nameOf } from './people.js';
 
@@ -39,7 +41,20 @@ export function describe(ev) {
   const subject = tag(ev, 'subject'); if (subject) out.context = `<div class="ctx">Subject: <b>${esc(subject)}</b></div>`;
   for (const t of tags(ev, 't').slice(0, 6)) out.pills.push(`<span class="pill tag">#${esc(t[1])}</span>`);
   (KIND_HANDLERS[k] || fallback)(ev, out);
+  if (isSealed(ev)) sealedExtras(ev, out);
   return out;
+}
+/** Ciphertext: a lock pill, a Decrypt chip when a held key is a party to it, and the opened layers as a card. */
+function sealedExtras(ev, out) {
+  const result = opened(ev.id);
+  if (result) {
+    const inner = result.layers.at(-1); const ie = inner.event;
+    const sentence = ie ? `${who(ie.pubkey)} ${ALARM.has(ie.kind) ? 'sent it sealed, as it should travel' : KIND_HANDLERS[ie.kind] ? describe(ie).verb : `published a kind ${ie.kind} event`}` : '';
+    const text = inner.json && typeof inner.json === 'object' ? JSON.stringify(inner.json, null, 2) : inner.plaintext || '';
+    out.card = card(`Decrypted with ${esc(result.as)}’s key${identityProfile(result.as) ? ` (${esc(identityProfile(result.as))})` : ''}`, `${ie ? `<span class="kn">${ie.kind}</span> ${esc(label(ie.kind))}: ${sentence}<br>` : ''}${text ? `<pre class="sealedtext">${esc(text)}</pre>` : ''}`);
+    out.pills.push('<span class="pill lock">decrypted in this window only</span>');
+  } else if (holders(ev).length) out.pills.push(`<button class="chip act" data-action="sealed-open" data-id="${ev.id}">Decrypt</button>`);
+  else out.pills.push(`<span class="pill lock">encrypted${tag(ev, 'p') ? ` for ${who(tag(ev, 'p'))}` : ''}</span>`);
 }
 
 function fallback(ev, out) { const info = kindInfo(ev.kind); out.verb = info.name ? `published: ${esc(info.name)} (kind ${ev.kind}${info.nips.length ? `, NIP-${info.nips[0]}` : ''})` : `published a kind ${ev.kind} event (not in the NIP index)`; out.body = esc(ev.content.slice(0, 300)); }
@@ -102,7 +117,8 @@ const KIND_HANDLERS = {
   30023: article,
   30078(ev, out) { out.verb = tag(ev, 'd') === 'clink-node' ? 'reports their Lightning node is online' : `stored app data “${esc(tag(ev, 'd') || '')}”`; },
   37001: tier,
-  1059(ev, out) { out.verb = `sent a sealed message to ${who(tag(ev, 'p'))}`; out.pills.push('<span class="pill lock">encrypted, only the recipient can open it</span>'); },
+  1059(ev, out) { out.verb = `sent a sealed message to ${who(tag(ev, 'p'))}`; },
+  4(ev, out) { out.verb = `sent an encrypted message (NIP-04) to ${who(tag(ev, 'p'))}`; },
   21089(ev, out) { out.verb = `asked ${who(tag(ev, 'p'))} for a content key`; out.pills.push('<span class="pill lock">key request</span>'); },
   21001(ev, out) { out.verb = `asked ${who(tag(ev, 'p'))} for an invoice over CLINK`; out.pills.push('<span class="pill lock">encrypted offer request</span>'); },
   21002(ev, out) { out.verb = `asked ${who(tag(ev, 'p'))} to pay from their budget over CLINK`; out.pills.push('<span class="pill lock">encrypted debit request</span>'); },

@@ -1,12 +1,13 @@
 // Tour content: the Quick Start, the feature tours and the contextual tips. Copy only, no mechanics.
 // Steps point at real controls; an action prepares the interface so the control is on screen.
 import { emit } from './bus.js';
+import { store } from './state.js';
 
 const kbd = k => `<kbd>${k}</kbd>`;
 const social = () => emit('window', 'social');
 const technical = () => emit('window', 'technical');
 
-export const NAK_INTRO = `<b>nak</b> is the Nostr army knife: a small command-line tool by fiatjaf that fetches events from relays, publishes signed events, decodes keys and codes, and streams what a relay sends. You never have to type a key: names like <code>$creator</code> stand in for them, and a helper on this Mac fills them in.`;
+export const NAK_INTRO = `<b>nak</b> is the <a href="https://github.com/fiatjaf/nak" target="_blank" rel="noopener">Nostr army knife</a>, a small command-line tool by <a href="https://github.com/fiatjaf" target="_blank" rel="noopener">fiatjaf</a> that fetches events from relays, publishes signed events, encrypts and wraps, decodes keys and codes, and streams what a relay sends. You never have to type a key: names like <code>$creator</code> stand in for them, and a helper on this Mac fills them in.`;
 
 const QUICK_START = {
   id: 'quick', title: 'Quick Start',
@@ -18,6 +19,7 @@ const QUICK_START = {
     { target: '#sbScroll', label: 'Sidebar', title: 'Two ways to narrow the view', text: '<b>Show</b> bundles events by what you are researching: subscriptions, keys, groups, wallets. <b>Kinds</b> lists what is really on the relays, flat or grouped by NIP. The field on top filters every section as you type.', tip: `Type <code>report</code> up there: NIP-56 appears before any report exists.`, action: async () => emit('sidebar-open'), placement: 'right' },
     { target: '#terminal', label: 'Terminal', title: 'Run nak without leaving the window', text: '<b>nak</b> is the Nostr army knife, a small command-line tool that talks to relays and signs events. Every nak list in the app has a <b>Run</b> button; results come back as blocks, and event lines become rows you can inspect. Keys are named, never pasted.', tip: `${kbd('T')} opens it; ${kbd('⌘K')} clears; ${kbd('⌘.')} stops a running command.`, action: async () => emit('terminal-open'), wait: 250, placement: 'above' },
     { target: '#actBtn', label: 'Acting as', title: 'Do things as someone', text: 'Pick an identity here and every write command signs as it. Mint a new one with a profile and relay list in a minute, then reply, react or subscribe straight from a post.', tip: 'The key never leaves your Mac; the app only knows the name.', action: async () => emit('terminal-close') },
+    { target: '#scenariosBtn', label: 'Scenarios', title: 'Test the relays with a recipe', text: 'A scenario publishes a small flow as the demo identities and checks what every relay did: accepted, stored, replaced, refused. The result is a matrix, one row per step and one column per relay.', tip: 'Add your own as a JSON file in <code>scenarios/</code>; it appears without a rebuild.', action: async () => technical() },
     { label: 'Done', title: 'You are set', text: 'Five keys worth remembering: <b>1</b> and <b>2</b> switch windows, <b>I</b> details, <b>T</b> terminal, <b>/</b> search. Everything else is one click from the toolbar.', tip: 'Help (?) keeps short tours for each area, and a small ? next to a section title explains it in place.', cta: 'Finish' },
   ],
 };
@@ -67,6 +69,19 @@ export const TOURS = [
     { target: '.carticle, .ctier, .cpost', title: 'Articles and memberships', text: 'A members-only article ends in a paywall that quotes the tier price; a tier is a membership card with perks and a Subscribe button that shows the real command.', placement: 'right' },
     { target: '.cbar', title: 'The action bar', text: 'Reply, repost, react and zap with counts. Each opens a preview: what a client would do, and the nak command that does it, ready to run as the acting identity.' },
   ] },
+  { id: 'sealed', title: 'Sealed Content', promise: 'Open a gift wrap or an encrypted message with a key the agent holds.', steps: [
+    { target: '#inspector [data-action="sealed-open"], #inspector [data-action="sealed-forget"], #inspector', title: 'Where sealed content shows', text: 'A gift wrap (kind 1059), an old-style message (kind 4) or any NIP-44 payload gets a <b>Sealed content</b> group in Summary: the scheme, who it is for, and whether a held key is a party to it.', action: async () => { technical(); const ev = [...store.events.values()].find(e => e.kind === 1059 || e.kind === 4); if (ev) emit('technical', ev.id); else emit('select-first'); }, wait: 250, placement: 'left' },
+    { target: '#inspector [data-action="sealed-open"], #inspector [data-action="sealed-forget"], #inspector', title: 'Decrypt with a held key', text: 'Decrypt sends the event to the agent, which opens it with the key it holds and returns the layers. The key never reaches the page; the plaintext stays in this window until you reload or press Forget.', tip: '<b>Copy nak</b> gives the same operation as a terminal command; <b>Run</b> puts it in the terminal.', placement: 'left' },
+    { target: '#inspector', title: 'Seal, rumor, plaintext', text: 'A gift wrap opens twice. The seal (kind 13) is signed by the real sender and its signature is checked. The rumor inside is unsigned by design and carries the actual event, for example a content key delivery, with its tags and content.', tip: 'The sealed-messages scenario publishes examples you can open as $subscriber.', placement: 'left' },
+  ] },
+  { id: 'scenarios', title: 'Scenarios', promise: 'Run a relay test recipe and read the matrix.', steps: [
+    { target: '#scenariosBtn', title: 'Relay tests as recipes', text: 'A scenario is a JSON file: steps that publish events as the demo identities, and what every relay is expected to do with each of them.', action: async () => technical() },
+    { target: '.slist', title: 'Pick one', text: 'Four ship with the test bed: relay basics, a subscription flow with a sealed key delivery, sealed messages, and NIP-29 groups. Drop your own JSON into <code>scenarios/</code> and it appears here.', action: async () => { technical(); emit('scenarios'); }, wait: 500, placement: 'right' },
+    { target: '.scen-setup', title: 'Who signs, which relays', text: 'The identities a scenario signs as must be held by the agent; the seed mints them. Tick the relays to run against; the connected ones are ticked already.', placement: 'right' },
+    { target: '.smatrix, [data-action="scenario-run"]', title: 'Run, and read the matrix', placement: 'left', text: 'One row per step, one column per relay. <b>✓</b> the relay did what the recipe expected, <b>✗</b> it did not, <b>–</b> the step only observed. Hover a cell for every check behind it.' },
+    { target: '[data-action="scenario-new"], .slist', title: 'Make your own', text: '<b>New Scenario…</b> opens an editor: who signs, steps with kind, content and tags in nak style, and expectations per relay, with the JSON beside it. Any event\'s ··· menu has <b>Add to Scenario…</b>, which turns what you just saw into a step.', placement: 'right' },
+    { target: '.sdet, .scen-empty', title: 'Every check, spelled out', text: 'Below the matrix each step lists its checks with expected and actual. Failed steps open by themselves. <b>Export Report</b> saves the whole run as Markdown.', placement: 'above' },
+  ] },
   { id: 'keys', title: 'Keyboard', promise: 'The single-key shortcuts, on one card.', steps: [
     { title: 'Shortcuts', label: 'Keyboard', text: `${kbd('1')} Social ${kbd('2')} Technical ${kbd('I')} Details ${kbd('/')} Search ${kbd('R')} Relays ${kbd('A')} Acting as ${kbd('S')} Sidebar ${kbd('F')} Filter sidebar ${kbd('Q')} Query ${kbd('T')} Terminal ${kbd('C')} Client View ${kbd(',')} Settings ${kbd('?')} Help ${kbd('Esc')} Close`, tip: `Single keys work when no text field has focus, because browsers keep the ⌘ combinations for themselves. In the terminal: ${kbd('⌘K')} clear, ${kbd('⌘F')} find, ${kbd('⌘.')} stop, ${kbd('⌘↑')} ${kbd('⌘↓')} between commands.`, cta: 'Close' },
   ] },
@@ -81,6 +96,8 @@ export const TIPS = {
   people: { title: 'People', text: 'Everyone who signed an event. Click a person for everything related to them: written by them, or tagging them.', tour: 'sidebar', step: 0 },
   details: { title: 'Details', text: 'The inspector for one post: Summary, Tags, Refs, Raw and nak. Press I to hide or show it.', tour: 'details', step: 0 },
   inspector: { title: 'Inspector', text: 'Select a row. Summary names the NIP and verifies the event; Tags and Refs explain its connections; nak gives commands.', tour: 'details', step: 0 },
+  scenarios: { title: 'Scenarios', text: 'Relay tests as recipes: each step publishes as a demo identity and states what every relay should do. The matrix shows what happened, cell by cell.', tour: 'scenarios', step: 0 },
+  sealed: { title: 'Sealed content', text: 'This event carries ciphertext. When the agent holds a key that is a party to it, Decrypt opens it here; the key never leaves the agent and the plaintext never leaves this window.', tour: 'sealed', step: 0 },
   terminal: { title: 'Terminal', text: 'Runs nak on this Mac. Each command is a block; event lines become inspectable rows. clear, history and help work as typed.', tour: 'terminal', step: 0 },
 };
 export const tourById = id => id === 'quick' ? QUICK_START : TOURS.find(t => t.id === id);

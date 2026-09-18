@@ -2,6 +2,7 @@
 // Everything here works for any kind: names come from the NIP index, the rest is derived from the event itself.
 import { tag, isEphemeral, isReplaceable, isAddressable, neventEncode, address, isHex32, decodeCode } from '../nostr.js';
 import { esc, fmtDate, shortHex, stripHtml, ago, plural, safeJson } from '../format.js';
+import { sealedGroup } from './sealed.js';
 import { label, kindInfo, kindClass, nipTitle, nipNote, nipUrl, LOCAL_NIPS, ALARM, tagMeaning } from '../kinds.js';
 import { store, settings, relayFor, relayName, referencedBy } from '../state.js';
 import { nameOf, npub } from '../people.js';
@@ -77,6 +78,7 @@ const BODY = {
       <div class="group">${row('id', ev.id, ev.id)}${row('author', `${esc(nameOf(ev.pubkey))}<br>${npub(ev.pubkey)}`, npub(ev.pubkey))}${row('hex', ev.pubkey, ev.pubkey)}${row('signature', ev.sig.slice(0, 40) + '…', ev.sig)}</div>
       <div class="group">${row('created', `${ev.created_at} · ${esc(fmtDate(ev.created_at))} · ${esc(ago(ev.created_at))} ago`, String(ev.created_at))}${row('received', esc(received))}${row('seen on', seen)}</div>
       <div class="group">${row('content', contentAnalysis(ev).map(esc).join(' · '))}${row('tags', `${ev.tags.length} · ${[...new Set(ev.tags.map(t => t[0]))].map(esc).join(' ')}`)}</div>
+      ${sealedGroup(ev)}
       <div class="group">${row('nevent', nevent.slice(0, 40) + '…', nevent)}${row('njump', 'njump.me/' + nevent.slice(0, 20) + '…', 'https://njump.me/' + nevent)}</div>`;
   },
   tags(ev) {

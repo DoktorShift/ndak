@@ -1,5 +1,6 @@
 // The nak terminal: a bottom panel that runs commands through the local agent and shows each run as a block
 // (command, output, status). Quiet chrome, keyboard first. Output is batched per animation frame and capped per block.
+import { AGENT } from '../agent.js';
 import { esc, ago } from '../format.js';
 import { label } from '../kinds.js';
 import { settings, saveSettings, ui, addEvent, store } from '../state.js';
@@ -9,7 +10,6 @@ import { openMenu, closeOverlays } from './overlays.js';
 import { decodeCode } from '../nostr.js';
 
 const $ = id => document.getElementById(id);
-const AGENT = 'http://127.0.0.1:7790';
 const START_CMD = 'docker compose up -d agent';
 const MAX_LINES = 5000;          // per block; the rest is counted and kept for export
 const SUGGESTIONS = ['nak req -l 20 ws://localhost:7777', 'nak req -k 0 -k 3 -l 50 ws://localhost:7777 | jq -c {kind,pubkey}', 'nak relay localhost:7777', 'nak req --stream ws://localhost:7777'];

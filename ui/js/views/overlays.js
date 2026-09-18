@@ -8,6 +8,7 @@ import { describe } from '../describe.js';
 import { forProfile, forRelay } from '../nak.js';
 import { nakList, eventJson, ICON } from './inspector.js';
 import { emit } from '../bus.js';
+import { holders, opened, open as openSealed } from '../sealed.js';
 import * as relay from '../relay.js';
 import * as ids from '../identities.js';
 import * as tour from '../tour.js';
@@ -113,6 +114,8 @@ export function eventMenu(id, anchor) {
     { label: 'Show Details', action: () => emit('details', id) },
     { label: 'Open Conversation', action: () => emit('thread', id) },
     { label: 'Open in Technical', action: () => emit('technical', id) },
+    { label: 'Add to Scenario…', action: () => emit('scenario-capture', id) },
+    ...(holders(ev).length && !opened(ev.id) ? [{ label: 'Decrypt with a Held Key', action: () => openSealed(ev).catch(e => showAlert({ title: 'Cannot Decrypt', message: e.message, buttons: ['OK'] })) }] : []),
     'sep',
     { label: 'Copy Event ID', action: copyText(ev.id) },
     { label: 'Copy Author npub', action: copyText(npub(ev.pubkey)) },
@@ -194,6 +197,7 @@ export function relayMenu(anchor) {
   items.push('sep');
   items.push({ label: 'Relay Details…', action: () => emit('relay-details', activeUrls()[0] || settings.relays[0].url) });
   items.push({ label: 'Query and Compare…', action: () => emit('query', '') });
+  items.push({ label: 'Scenarios…', action: () => emit('scenarios') });
   items.push({ label: 'nak Commands for a Relay…', action: () => relayNakSheet() });
   items.push('sep');
   items.push({ label: 'Add Relay…', action: addRelayPrompt });
@@ -231,7 +235,7 @@ export function settingsSheet() {
 export function helpSheet() {
   const card = t => `<div class="tour"><div class="m"><span><b>${esc(t.title)}</b></span><span>${t.steps.length} ${t.steps.length === 1 ? 'step' : 'steps'}${tour.seen(t.id) ? ' · seen' : ''}</span></div><p>${esc(t.promise)}</p><button class="show" data-action="tour" data-tour="${t.id}">Show Me</button></div>`;
   openSheet('Help', `<div class="settings help">
-    <div class="quick"><div><div class="sect" style="margin:0 0 4px">Quick Start</div><p>Eight steps on the live interface, about two minutes. It points at the real controls, so try them as you go.</p></div><div class="row"><button class="cprimary" data-action="tour" data-tour="quick">${tour.seen('quick') ? 'Replay Tour' : 'Take the Tour'}</button>${store.events.size ? '' : '<button class="copy" data-action="sample-load">Load Sample Data</button>'}</div></div>
+    <div class="quick"><div><div class="sect" style="margin:0 0 4px">Quick Start</div><p>Nine steps on the live interface, about two minutes. It points at the real controls, so try them as you go.</p></div><div class="row"><button class="cprimary" data-action="tour" data-tour="quick">${tour.seen('quick') ? 'Replay Tour' : 'Take the Tour'}</button>${store.events.size ? '' : '<button class="copy" data-action="sample-load">Load Sample Data</button>'}</div></div>
     <div class="sect">Tours by area</div><div class="tours">${TOURS.map(card).join('')}</div>
     <div class="sect">What is nak?</div><div class="inset" style="padding:10px 12px"><p style="margin:0">${NAK_INTRO} It is the <code>agent</code> service of the Docker stack; the terminal says so when it cannot reach it.</p></div>
     <div class="sect">Tips</div><div class="inset"><div class="irow"><span>Small ? marks next to section titles explain them in place<br><span class="hint">Got It hides a mark; this brings all of them back.</span></span><button class="copy" data-action="tips-reset">Reset Tips</button></div></div>

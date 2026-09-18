@@ -2,8 +2,9 @@
 // The page only ever sees names and public keys. "Acting as" picks which name write commands sign with.
 import { store, settings, saveSettings } from './state.js';
 import { emit } from './bus.js';
+import { nameOf } from './people.js';
+import { AGENT } from './agent.js';
 
-const AGENT = 'http://127.0.0.1:7790';
 export let available = false;
 
 export async function refresh() {
@@ -13,6 +14,10 @@ export async function refresh() {
   emit('identities');
 }
 export const acting = () => store.identities.find(i => i.name === settings.actAs) || null;
+/** For plain-language text: the identity name, plus the profile name when one is known and differs. Tokens with $ belong in commands only. */
+export function identityLabel(name) { const shown = identityProfile(name); return shown ? `${name} (${shown})` : name; }
+/** The profile name behind an identity, or '' when there is none or it equals the identity name. */
+export function identityProfile(name) { const i = store.identities.find(x => x.name === name); if (!i) return ''; const shown = nameOf(i.pubkey); return shown && shown !== name && !shown.startsWith('npub1') ? shown : ''; }
 export function actAs(name) { settings.actAs = name; saveSettings(); emit('identities'); }
 
 export async function create(payload) {

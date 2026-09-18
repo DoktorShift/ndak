@@ -24,8 +24,12 @@ services:
       RELAY_MAP: ${RELAY_MAP:-7777=rnostr:8080,7779=nostr-rs-relay:8080,7780=strfry:7777,7781=obelisk-relay:8080,7782=khatru:3334}
       RELAY_HOST: host.docker.internal # any other "localhost" port: a relay you run on this machine yourself
       UI_ORIGIN: http://localhost:7778,http://127.0.0.1:7778
+      UI_URL: http://localhost:7778/
+      SCENARIOS_DIR: /scenarios
     extra_hosts: ["host.docker.internal:host-gateway"]
-    volumes: ["./identities:/identities"]
+    volumes:
+      - ./identities:/identities
+      - ./scenarios:/scenarios            # scenario files; the window saves new ones here too
 
   seed:                                # optional, once: three demo identities and a small conversation
     profiles: ["seed"]

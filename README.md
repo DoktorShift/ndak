@@ -16,7 +16,7 @@ Requirements: Docker with Compose v2 (Docker Desktop on macOS or Windows, Docker
 | Port | Service | Why it is here |
 | --- | --- | --- |
 | 7778 | **ui**, nginx | the Relay Window page |
-| 7790 | **agent**, Node + nak + jq | runs commands for the page's terminal and holds the identity keys; reachable from this machine only |
+| 7790 | **agent**, Node + nak + jq | runs commands for the page's terminal, opens sealed content, runs scenarios and holds the identity keys; reachable from this machine only. Open http://127.0.0.1:7790/ and it explains itself |
 | 7777 | [rnostr](https://github.com/rnostr/rnostr) | many NIPs, COUNT (NIP-45) and search (NIP-50) |
 | 7779 | [nostr-rs-relay](https://github.com/scsibug/nostr-rs-relay) | reference behaviour; passes ephemeral events on without storing them |
 | 7780 | [strfry](https://github.com/hoytech/strfry) | NIP-42 AUTH for kinds 4 and 1059, COUNT, NIP-77 negentropy sync |
@@ -39,11 +39,17 @@ Relay Window connects to all five relays at once, keeps every event with the rel
 
 **Busy relays**: add a public relay (Manage Relays…) and the window copes. Banners coalesce into one per burst and come from local relays only by default (Settings → Notification banners). The Live pill shows the arrival rate. Rendering is throttled, the table shows the first 500 rows and the timeline the latest 300 posts, and the window keeps the newest 5,000 events (Settings → Events to keep).
 
-**Tours**: Help (`?`) holds a two-minute Quick Start and short tours per area; a small **?** next to a section title explains it in place.
+**Sealed content**: a gift wrap, an old-style encrypted message or any NIP-44 payload gets a Sealed content group in the inspector. Decrypt asks the agent to open it with the key it holds and shows the layers: the seal, signed by the real sender and verified, and the rumor inside with its content and tags. The key never reaches the page.
+
+**Scenarios**: relay tests as recipes. Each JSON file in `scenarios/` publishes a small flow as the demo identities and states what every relay should do. Scenarios… in the Technical toolbar runs one and draws the matrix live, one row per step and one column per relay, with every check spelled out and a Markdown report. Four ship with the test bed. Write your own in the window (New Scenario…, or Add to Scenario… from any event's menu: an editor with the JSON beside the form, identities minted inline) or drop a file into `scenarios/`; either way it appears without a rebuild (`scenarios/README.md` has the format).
+
+**Tours**: Help (`?`) holds a two-minute Quick Start and short tours per area, including one for sealed content and one for scenarios; a small **?** next to a section title explains it in place.
+
+**Agent page**: open http://127.0.0.1:7790/ and the agent explains what it does, what it never does, what it holds and which endpoints it answers.
 
 ## Terminal and identities
 
-The Terminal (`T`) runs nak through the agent and shows every run as a block: command, output, status rail, duration. Event lines become rows you can inspect; ids, npubs and relay URLs are clickable. `clear`, `history` and `help` work as typed; `↑ ↓` history, `⌘K` clear, `⌘F` find, `⌘.` stop, `⌘↑ ⌘↓` between commands. nak's relay narration folds into one status line per run.
+The Terminal (`T`) runs [nak](https://github.com/fiatjaf/nak), the Nostr army knife by [fiatjaf](https://github.com/fiatjaf), through the agent and shows every run as a block: command, output, status rail, duration. Event lines become rows you can inspect; ids, npubs and relay URLs are clickable. `clear`, `history` and `help` work as typed; `↑ ↓` history, `⌘K` clear, `⌘F` find, `⌘.` stop, `⌘↑ ⌘↓` between commands. nak's relay narration folds into one status line per run.
 
 An **identity** is a named key the agent holds. **New Identity…** mints one, publishes a profile and a NIP-65 relay list, and stores the key in `identities/relay-window.env`. **Acting as** (toolbar, `A`) chooses who signs the commands the window generates; names like `$creator` stand in for keys, and the agent fills them in on its side. Keys never reach the page.
 
@@ -68,14 +74,15 @@ Identities survive `down -v`: they are files in `identities/`, not volume data. 
 
 ```
 ui/                 the page: index.html, css/app.css, js/ (ES modules, no build step), data/sample.jsonl
-agent/              agent.js (the runner), seed.js (demo data), keys.js (shared), Dockerfile
+agent/              agent.js (the runner and its page), sealed.js (decrypt), scenarios.js (the scenario runner), seed.js (demo data), nak.js and keys.js (shared), Dockerfile
+scenarios/          relay test recipes as JSON, mounted read-only into the agent; README.md has the format
 nginx/ui.conf       serves ui/ with Cache-Control: no-cache, so edits show on reload
 relays/             one folder per relay: config, and for khatru the Go source and Dockerfile
 identities/         keys the agent holds (git-ignored)
 scripts/registry.py regenerates ui/js/registry.js from the NIP index
 ```
 
-The page talks to relays directly over WebSocket and to the agent on `127.0.0.1:7790`. The agent binds to localhost only (published on this machine's loopback address), accepts requests from the page's origin only, runs `nak` and `jq` only, pipes allowed and no shell, and replaces `$name` tokens with the keys it holds. Inside its container "localhost" is not this machine, so relay URLs given as localhost are dialled through `host.docker.internal` and mapped back in the output. The seed uses the same image.
+Everything the agent does is a [nak](https://github.com/fiatjaf/nak) command: publishing, encrypting, gift-wrapping, decrypting, querying. The page talks to relays directly over WebSocket and to the agent on `127.0.0.1:7790`. The agent binds to localhost only (published on this machine's loopback address), accepts requests from the page's origin only, runs `nak` and `jq` only, pipes allowed and no shell, and replaces `$name` tokens with the keys it holds. Inside its container "localhost" is not this machine, so relay URLs given as localhost are dialled through `host.docker.internal` and mapped back in the output. The seed uses the same image.
 
 obelisk-relay needs a relay key of its own; `obelisk-init` writes one into `relays/obelisk/settings.local.yml` on first start, so every install has a different key and the checked-in `settings.yml` holds none.
 

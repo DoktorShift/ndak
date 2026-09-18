@@ -1,0 +1,23 @@
+{
+  "id": "groups",
+  "title": "Groups (NIP-29)",
+  "summary": "Create a group on the group relay, describe it, let a member in, post two messages and read them back; the other relays are not group relays and only store what they are sent.",
+  "identities": ["creator", "subscriber"],
+  "steps": [
+    { "id": "create", "title": "Creator creates the group", "as": "creator",
+      "event": { "kind": 9007, "content": "", "tags": [["h", "scenario"]] },
+      "expect": { "accepted": { "default": true, "obelisk-relay": true } } },
+    { "id": "describe", "title": "Creator names the group", "as": "creator",
+      "event": { "kind": 9002, "content": "", "tags": [["h", "scenario"], ["name", "Scenario group"], ["about", "Created by the groups scenario"], ["public"], ["open"]] },
+      "expect": { "accepted": true } },
+    { "id": "join", "title": "Subscriber asks to join", "as": "subscriber",
+      "event": { "kind": 9021, "content": "", "tags": [["h", "scenario"]] },
+      "expect": { "accepted": true } },
+    { "id": "message", "title": "Creator posts the first message", "as": "creator",
+      "event": { "kind": 9, "content": "First message in the scenario group.", "tags": [["h", "scenario"]] },
+      "expect": { "accepted": true, "stored": true } },
+    { "id": "reply", "title": "Subscriber answers", "as": "subscriber",
+      "event": { "kind": 9, "content": "Second message, from the member who just joined.", "tags": [["h", "scenario"], ["e", "$message.id"]] },
+      "expect": { "accepted": true, "count": { "filter": { "kinds": [9], "#h": ["scenario"] }, "min": 2 } } }
+  ]
+}

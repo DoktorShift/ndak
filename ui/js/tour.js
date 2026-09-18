@@ -11,7 +11,7 @@ const listeners = [];
 export async function start(tour, index = 0) {
   stop(false);
   current = { tour, index: -1 };
-  $('tour').hidden = false;
+  showOverlay(true);
   document.body.classList.add('touring');
   await go(index);
   window.addEventListener('resize', reposition); window.addEventListener('keydown', onKey, true);
@@ -19,7 +19,7 @@ export async function start(tour, index = 0) {
 export function stop(markSeen = true) {
   if (!current) return;
   if (markSeen) remember(current.tour.id);
-  current = null; $('tour').hidden = true; document.body.classList.remove('touring');
+  current = null; showOverlay(false); document.body.classList.remove('touring');
   window.removeEventListener('resize', reposition); window.removeEventListener('keydown', onKey, true);
   for (const off of listeners.splice(0)) off();
 }
@@ -33,9 +33,17 @@ async function go(index) {
   const step = current.tour.steps[index]; current.index = index;
   if (step.action) { try { await step.action(); } catch { /* a step may fail to prepare; it still shows */ } }
   await settle(step.wait || 60);
+  if (current) showOverlay(true);   // a sheet the step opened or closed changes where the overlay must live
   render();
 }
 const settle = ms => new Promise(r => setTimeout(r, ms));
+/** Sheets are modal dialogs and paint in the browser's top layer, above everything else. While one is open the overlay
+ *  lives inside it, so the veil and the callout can point at controls in the sheet; otherwise it lives in the body. */
+function showOverlay(on) {
+  const el = $('tour'); const sheet = $('sheet'); const host = sheet?.open ? sheet : document.body;
+  if (on && el.parentElement !== host) host.appendChild(el);
+  el.hidden = !on;
+}
 
 function render() {
   if (!current) return;
@@ -43,7 +51,7 @@ function render() {
   const target = step.target ? findTarget(step.target) : null;
   const card = $('tourCard');
   card.innerHTML = `
-    <div class="tk"><span>${esc(tour.title)}</span><span>${esc(step.label !== undefined ? step.label : tour.title)}</span></div>
+    <div class="tk"><span>${esc(tour.title)}</span><span>${esc(step.label || '')}</span></div>
     <h3>${esc(step.title)}</h3>
     <p>${step.text}</p>
     ${step.tip ? `<p class="tt">${step.tip}</p>` : ''}
@@ -92,6 +100,7 @@ function onKey(e) {
   else if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); back(); }
 }
 export function init() {
+  $('sheet').addEventListener('close', () => { if (current) { showOverlay(true); requestAnimationFrame(reposition); } });
   $('tour').addEventListener('click', e => {
     const b = e.target.closest('[data-tour-act]'); if (!b) return;
     ({ next, back, skip: () => stop(true) })[b.dataset.tourAct]();

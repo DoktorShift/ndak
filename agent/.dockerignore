@@ -1,5 +1,3 @@
 *
 !package.json
-!agent.js
-!seed.js
-!keys.js
+!*.js

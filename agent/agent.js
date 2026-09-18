@@ -7,13 +7,17 @@
 //   node agent/agent.js --port 7790 --host 127.0.0.1 --identities ../identities
 //
 // Environment, set by the Docker image: PORT, HOST (0.0.0.0 inside the container; the host publishes it on 127.0.0.1 only),
-// UI_ORIGIN (comma separated), IDENTITIES_DIR, RELAY_MAP and RELAY_HOST: inside a container "localhost" is not the machine
+// UI_ORIGIN (comma separated), IDENTITIES_DIR, SCENARIOS_DIR, RELAY_MAP and RELAY_HOST: inside a container "localhost" is not the machine
 // that publishes the relay ports, so relay URLs given as localhost are dialled by service name (RELAY_MAP) or through
 // RELAY_HOST (host.docker.internal), and mapped back in the output so what people read matches what they typed.
 import http from 'node:http';
-import { spawn, execFileSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { readFileSync, existsSync, appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { parseEnv, dialer } from './keys.js';
+import { nak, nakOut, eventLines } from './nak.js';
+import { openWithAny } from './sealed.js';
+import { listScenarios, loadScenario, runScenario, saveScenario, removeScenario } from './scenarios.js';
+import { pageHtml } from './page.js';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,39 +29,46 @@ const HOST = args.host || env.HOST || '127.0.0.1';
 const IDENTITIES_DIR = resolve(here, args.identities || env.IDENTITIES_DIR || '../identities');
 const IDENTITIES = resolve(IDENTITIES_DIR, 'demo-keys.env');      // seeded demo keys
 const MANAGED = resolve(IDENTITIES_DIR, 'relay-window.env');      // identities minted from the UI
-const CWD = resolve(here, '..');
+const SCENARIOS_DIR = resolve(here, args.scenarios || env.SCENARIOS_DIR || '../scenarios');
+const UI_URL = env.UI_URL || 'http://localhost:7778/';
 const ORIGINS = new Set((env.UI_ORIGIN || 'http://localhost:7778,http://127.0.0.1:7778').split(',').map(o => o.trim()).filter(Boolean));
 const RELAY_HOST = (env.RELAY_HOST || '').trim();
 const { toDial, fromDial } = dialer(env.RELAY_MAP, RELAY_HOST);
 mkdirSync(IDENTITIES_DIR, { recursive: true });
+const STARTED = new Date();
 const ALLOWED = new Set(['nak', 'jq']);
 
 /** Demo keys first, then the managed file; a managed name never overrides a demo name. */
 function loadIdentities() { return { ...parseEnv(MANAGED), ...parseEnv(IDENTITIES) }; }
 /** ws://localhost:7777 → ws://host.docker.internal:7777 when RELAY_HOST is set; only whole-URL arguments qualify. */
-const nak = (args, input) => execFileSync('nak', args, { encoding: 'utf8', input: input ?? '', cwd: CWD, env: { ...process.env, NO_COLOR: '1' }, stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-const pubkeyOf = sec => { try { return nak(['key', 'public', sec]); } catch { return null; } };
+const pubkeyOf = async sec => { try { return await nakOut(['key', 'public', sec]); } catch { return null; } };
+/** [name, secret, pubkey] for every held identity; the tuple never leaves this process. */
+async function heldIdentities() { const all = loadIdentities(); return (await Promise.all(Object.entries(all).map(async ([name, sec]) => [name, sec, await pubkeyOf(sec)]))).filter(t => t[2]); }
 /** Public view of every identity: name, pubkey, which file. Secrets never leave this process. */
-function listIdentities() {
+async function listIdentities() {
   const demo = parseEnv(IDENTITIES), managed = parseEnv(MANAGED);
-  return [...Object.entries(demo).map(([name, sec]) => ({ name, pubkey: pubkeyOf(sec), source: 'demo' })), ...Object.entries(managed).filter(([n]) => !(n in demo)).map(([name, sec]) => ({ name, pubkey: pubkeyOf(sec), source: 'managed' }))].filter(i => i.pubkey);
+  const held = await heldIdentities();
+  return held.map(([name, , pubkey]) => ({ name, pubkey, source: name in demo ? 'demo' : 'managed' })).filter(i => i.source === 'demo' || !(i.name in demo) || managed[i.name]);
 }
 /** Mint a key, store it, publish kind 0 and the NIP-65 relay list to the chosen relays. Returns what happened. */
-function createIdentity({ name, profile = {}, relays = [] }) {
+async function createIdentity({ name, profile = {}, relays = [] }) {
   if (!/^[a-z][a-z0-9_]{0,31}$/.test(name || '')) throw new Error('name: lowercase letters, digits and _ only, 1 to 32 characters');
   if (loadIdentities()[name]) throw new Error(`"${name}" already exists`);
-  const sec = nak(['key', 'generate']); const pubkey = pubkeyOf(sec);
+  const sec = await nakOut(['key', 'generate']); const pubkey = await pubkeyOf(sec);
   appendFileSync(MANAGED, `${name}=${sec}\n`, { mode: 0o600 });
   const urls = relays.filter(r => r.url).map(r => r.url);
   const results = [];
-  const publish = (label, args) => { try { const out = nak([...args, '--sec', sec, ...urls.map(toDial)]); const ev = out.split('\n').find(l => l.startsWith('{')); results.push({ label, ok: true, id: ev ? JSON.parse(ev).id : null }); } catch (e) { results.push({ label, ok: false, error: String(e.stderr || e.message).slice(0, 300) }); } };
+  const publish = async (label, args) => {
+    const r = await nak([...args, '--sec', sec, ...urls.map(toDial)]); const ev = eventLines(r.out)[0];
+    if (r.code === 0 && ev) results.push({ label, ok: true, id: ev.id }); else results.push({ label, ok: false, error: fromDial(r.err || r.out).split('\n').pop().slice(0, 300) });
+  };
   const content = JSON.stringify(Object.fromEntries(Object.entries({ name: profile.name || name, display_name: profile.display_name || '', about: profile.about || '', picture: profile.picture || '', nip05: profile.nip05 || '', lud16: profile.lud16 || '' }).filter(([, v]) => v)));
   if (urls.length) {
-    publish('profile (kind 0)', ['event', '-k', '0', '-c', content]);
+    await publish('profile (kind 0)', ['event', '-k', '0', '-c', content]);
     const tags = relays.filter(r => r.url).flatMap(r => ['-t', `r=${r.url}${r.read && r.write ? '' : r.write ? ';write' : ';read'}`]);
-    publish('relay list (kind 10002, NIP-65)', ['event', '-k', '10002', '-c', '', ...tags]);
+    await publish('relay list (kind 10002, NIP-65)', ['event', '-k', '10002', '-c', '', ...tags]);
   }
-  return { name, pubkey, npub: nak(['encode', 'npub', pubkey]), results };
+  return { name, pubkey, npub: await nakOut(['encode', 'npub', pubkey]), results };
 }
 function removeIdentity(name) {
   const file = name in parseEnv(MANAGED) ? MANAGED : name in parseEnv(IDENTITIES) ? IDENTITIES : null;
@@ -96,32 +107,46 @@ function prepare(text, identities) {
   });
 }
 
-function nakVersion() { try { return execFileSync('nak', ['--version'], { encoding: 'utf8' }).trim(); } catch { return null; } }
+let nakVersion = null; nakOut(['--version']).then(v => { nakVersion = v; }, () => {});
 
 const server = http.createServer((req, res) => {
   const origin = req.headers.origin;
   const headers = { 'Access-Control-Allow-Origin': ORIGINS.has(origin) ? origin : 'null', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Cache-Control': 'no-store' };
   if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end(); }
   if (origin && !ORIGINS.has(origin)) { res.writeHead(403, headers); return res.end('origin not allowed'); }
+  const json = (status, body) => { res.writeHead(status, { ...headers, 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
+  const readBody = () => new Promise((ok, fail) => { let body = ''; req.on('data', c => { body += c; if (body.length > 1 << 20) req.destroy(); }); req.on('end', () => { try { ok(JSON.parse(body || '{}')); } catch (e) { fail(new Error('body is not JSON')); } }); });
+  if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
+    res.writeHead(200, { ...headers, 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end(pageHtml({ nak: nakVersion, identities: Object.keys(loadIdentities()), relayMap: env.RELAY_MAP, relayHost: RELAY_HOST, origins: [...ORIGINS], scenarios: listScenarios(SCENARIOS_DIR).length, uiUrl: UI_URL, since: STARTED.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) }));
+  }
   if (req.method === 'GET' && req.url === '/health') {
-    const identities = loadIdentities();
-    res.writeHead(200, { ...headers, 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ ok: true, nak: nakVersion(), identities: Object.keys(identities), identitiesDir: IDENTITIES_DIR, relayMap: env.RELAY_MAP || null, relayHost: RELAY_HOST || null }));
+    return json(200, { ok: true, nak: nakVersion, identities: Object.keys(loadIdentities()), identitiesDir: IDENTITIES_DIR, relayMap: env.RELAY_MAP || null, relayHost: RELAY_HOST || null, scenarios: listScenarios(SCENARIOS_DIR).length });
   }
-  if (req.method === 'GET' && req.url === '/identities') {
-    res.writeHead(200, { ...headers, 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ identities: listIdentities(), managedFile: MANAGED }));
-  }
+  if (req.method === 'GET' && req.url === '/identities') return listIdentities().then(identities => json(200, { identities, managedFile: MANAGED }));
   if (req.method === 'POST' && (req.url === '/identities' || req.url === '/identities/remove')) {
-    let body = ''; req.on('data', c => { body += c; if (body.length > 65536) req.destroy(); });
-    req.on('end', () => {
-      try {
-        const data = JSON.parse(body || '{}');
-        const out = req.url === '/identities' ? createIdentity(data) : (removeIdentity(data.name), { removed: data.name });
-        res.writeHead(200, { ...headers, 'Content-Type': 'application/json' }); res.end(JSON.stringify(out));
-      } catch (e) { res.writeHead(400, { ...headers, 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: e.message })); }
-    });
-    return;
+    return readBody().then(async data => json(200, req.url === '/identities' ? await createIdentity(data) : (removeIdentity(data.name), { removed: data.name }))).catch(e => json(400, { error: e.message }));
+  }
+  if (req.method === 'POST' && req.url === '/decrypt') {
+    return readBody().then(async ({ event, as }) => {
+      if (!event || !Number.isInteger(event.kind) || typeof event.content !== 'string' || typeof event.pubkey !== 'string') throw new Error('event: kind, pubkey and content are required');
+      json(200, await openWithAny(event, await heldIdentities(), as ? [as] : null));
+    }).catch(e => json(e.status || 400, { error: e.message }));
+  }
+  if (req.method === 'GET' && req.url === '/scenarios') return json(200, { scenarios: listScenarios(SCENARIOS_DIR), dir: SCENARIOS_DIR });
+  if (req.method === 'POST' && (req.url === '/scenarios/save' || req.url === '/scenarios/remove')) {
+    return readBody().then(data => json(200, req.url === '/scenarios/save' ? saveScenario(SCENARIOS_DIR, data.scenario) : removeScenario(SCENARIOS_DIR, data.id))).catch(e => json(400, { error: e.message }));
+  }
+  if (req.method === 'POST' && req.url === '/scenarios/run') {
+    return readBody().then(async ({ id, relays }) => {
+      const scenario = loadScenario(SCENARIOS_DIR, id); if (!scenario) throw new Error(`no scenario "${id}"`);
+      const targets = (relays || []).filter(r => r && /^wss?:\/\//.test(r.url)).map(r => ({ url: r.url, name: r.name || r.url }));
+      if (!targets.length) throw new Error('relays: at least one is needed');
+      res.writeHead(200, { ...headers, 'Content-Type': 'application/x-ndjson', 'X-Accel-Buffering': 'no' });
+      let closed = false; res.on('close', () => { closed = true; });
+      for await (const line of runScenario(scenario, { relays: targets, identities: await heldIdentities(), toDial, fromDial, aborted: () => closed })) { if (closed) break; res.write(JSON.stringify(line) + '\n'); }
+      res.end();
+    }).catch(e => { if (!res.headersSent) json(400, { error: e.message }); else { res.write(JSON.stringify({ error: e.message }) + '\n'); res.end(); } });
   }
   if (req.method === 'POST' && req.url === '/run') {
     let body = ''; req.on('data', c => { body += c; if (body.length > 65536) req.destroy(); });
@@ -132,7 +157,7 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { ...headers, 'Content-Type': 'application/x-ndjson', 'X-Accel-Buffering': 'no' });
       const send = obj => res.write(JSON.stringify(obj) + '\n');
       // Pipeline: stdout of each command feeds the next; stdin of the first is closed (nak would otherwise wait on it).
-      const children = commands.map((argv, i) => spawn(argv[0], argv.slice(1), { cwd: CWD, env: { ...process.env, NO_COLOR: '1' }, stdio: [i === 0 ? 'ignore' : 'pipe', 'pipe', 'pipe'] }));
+      const children = commands.map((argv, i) => spawn(argv[0], argv.slice(1), { env: { ...process.env, NO_COLOR: '1' }, stdio: [i === 0 ? 'ignore' : 'pipe', 'pipe', 'pipe'] }));
       children.forEach((child, i) => {
         if (i > 0) children[i - 1].stdout.pipe(child.stdin);
         child.stderr.on('data', d => send({ e: fromDial(d.toString()) }));
@@ -150,5 +175,5 @@ const server = http.createServer((req, res) => {
 });
 const argv0 = argv => argv[0];
 server.listen(PORT, HOST, () => {
-  console.log(`agent on http://${HOST}:${PORT}  identities=${IDENTITIES_DIR}  relays via ${env.RELAY_MAP ? 'service names' : RELAY_HOST || 'localhost'}  nak=${nakVersion() || 'NOT FOUND in PATH'}`);
+  console.log(`agent on http://${HOST}:${PORT}  identities=${IDENTITIES_DIR}  relays via ${env.RELAY_MAP ? 'service names' : RELAY_HOST || 'localhost'}  nak=${nakVersion || 'starting'}`);
 });

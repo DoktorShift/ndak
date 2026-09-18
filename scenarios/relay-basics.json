@@ -1,0 +1,23 @@
+{
+  "id": "relay-basics",
+  "title": "Relay basics",
+  "summary": "A note, a profile published twice, an ephemeral event and a deletion: how each relay stores, replaces, forgets and deletes.",
+  "identities": ["creator", "platform"],
+  "steps": [
+    { "id": "note", "title": "Publish a note", "as": "creator",
+      "event": { "kind": 1, "content": "Scenario: relay basics. A plain note every relay should keep." },
+      "expect": { "accepted": true, "stored": true } },
+    { "id": "profile-1", "title": "Profile, first version", "as": "creator",
+      "event": { "kind": 0, "content": "{\"name\":\"creator\",\"display_name\":\"Milena writes\",\"about\":\"first version\"}" },
+      "expect": { "accepted": true } },
+    { "id": "profile-2", "title": "Profile, second version replaces the first", "as": "creator",
+      "event": { "kind": 0, "content": "{\"name\":\"creator\",\"display_name\":\"Milena writes\",\"about\":\"Writes about relays. A demo identity of this test bed.\"}" },
+      "expect": { "accepted": true, "latest": { "kinds": [0], "authors": ["$creator"] } } },
+    { "id": "ephemeral", "title": "An ephemeral key request: passed on, kept only briefly if at all", "as": "creator",
+      "event": { "kind": 21089, "content": "", "tags": [["p", "$platform"]] },
+      "expect": { "accepted": { "default": true, "khatru": null }, "stored": { "default": false, "rnostr": true, "strfry": true } } },
+    { "id": "delete", "title": "Ask every relay to delete the note (NIP-09)", "as": "creator",
+      "event": { "kind": 5, "content": "scenario cleanup", "tags": [["e", "$note.id"]] },
+      "expect": { "accepted": true, "gone": "$note.id" } }
+  ]
+}

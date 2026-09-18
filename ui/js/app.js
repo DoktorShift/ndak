@@ -11,6 +11,9 @@ import * as ov from './views/overlays.js';
 import { previewText, previewAction } from './views/client.js';
 import * as ids from './identities.js';
 import { querySheet, runQuery, toggleAll, nakForQuery } from './views/query.js';
+import * as scen from './views/scenarios.js';
+import * as sed from './views/scenario-editor.js';
+import * as sealed from './sealed.js';
 import { relaySheet, refreshRelaySheet, runProbes } from './views/relayinfo.js';
 import * as term from './views/terminal.js';
 import * as tour from './tour.js';
@@ -120,6 +123,8 @@ on('terminal-open', () => term.toggle(true));
 on('terminal-close', () => term.toggle(false));
 on('identities', () => { renderToolbar(); renderSidebar(); });
 on('terminal', cmd => term.show(cmd));
+on('scenarios', () => scen.scenariosSheet());
+on('scenario-capture', id => { const ev = store.events.get(id); if (ev) scen.captureEvent(ev); });
 on('relay-details', url => relaySheet(url));
 on('relay:info', ({ url }) => { if ($('relayDetails')) refreshRelaySheet(url); });
 
@@ -170,6 +175,20 @@ const ACTIONS = {
   feedmode: el => { settings.feedMode = el.dataset.mode; saveSettings(); renderSocial(); $('feedwrap').scrollTop = 0; },
   section: el => { const id = el.dataset.section; settings.collapsed[id] = !settings.collapsed[id]; saveSettings(); renderSidebar(); },
   'sheet-close': () => ov.closeSheet(),
+  scenarios: () => scen.scenariosSheet(),
+  'scenario-pick': el => scen.pick(el.dataset.id),
+  'scenario-run': () => scen.run(),
+  'scenario-stop': () => scen.stop(),
+  'scenario-export': () => scen.exportReport(),
+  'scenario-new': () => scen.newScenario(),
+  'scenario-draft': () => scen.continueDraft(),
+  'scenario-edit': () => scen.editCurrent(),
+  'scenario-duplicate': () => scen.duplicateCurrent(),
+  'scenario-delete': () => scen.deleteCurrent(),
+  ...Object.fromEntries(Object.keys(sed.actions).map(k => [k, el => sed.actions[k](el)])),
+  'sealed-open': el => { const ev = store.events.get(el.dataset.id); if (ev) sealed.open(ev).catch(e => ov.showAlert({ title: 'Cannot Decrypt', message: e.message, buttons: ['OK'] })); },
+  'sealed-forget': el => sealed.forget(el.dataset.id),
+  'sealed-run': el => term.show(el.dataset.cmd),
   'sb-clear': () => { ui.sbFilter = ''; $('sbFilter').value = ''; renderSidebar(); $('sbFilter').focus(); },
   'relay-nak': () => ov.relayNakSheet(),
   kind: el => { ui.scope = el.dataset.kind === 'all' ? { type: 'all' } : { type: 'kind', value: +el.dataset.kind }; render(); },
@@ -311,6 +330,7 @@ $('liveBtn').onclick = () => {
 $('detailsBtn').onclick = toggleDetails;
 $('terminalBtn').onclick = () => term.toggle();
 term.init();
+scen.init();
 on('layout', () => applyWidths());
 on('search', q => { $('search').value = q; setSearch(q); });
 on('add-relay', url => { const clean = relay.addRelay(url); if (clean) relay.setActive(clean, true); });
