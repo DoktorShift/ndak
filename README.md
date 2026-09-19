@@ -8,8 +8,45 @@ docker compose up -d                            # first start builds two small i
 open http://localhost:7778/
 docker compose --profile seed run --rm seed     # optional, once: demo identities and sample events
 ```
+*Requirements: Docker with Compose v2 (Docker Desktop on macOS or Windows, Docker Engine on Linux). Nothing else is installed on your machine; `nak` lives in the agent container.*
 
-Requirements: Docker with Compose v2 (Docker Desktop on macOS or Windows, Docker Engine on Linux). Nothing else is installed on your machine; `nak` lives in the agent container.
+## See Relay Window in action
+
+### Social View
+
+Read relay traffic like a real social timeline instead of a stream of raw events.  
+Posts, replies, reactions, reposts, zaps, articles, subscriptions and other supported events are rendered in their familiar form.
+
+<p align="center">
+  <img
+    src="https://github.com/user-attachments/assets/7f7e7928-291a-4834-be8d-4aa80ae25ed3"
+    alt="NDAK Relay Window Social View"
+    width="100%"
+  />
+</p>
+
+<sub>
+Social View turns events from the connected relays into a readable timeline while still keeping the underlying Nostr data within reach.
+</sub>
+
+<br><br>
+
+### Technical View
+
+Drop down to the protocol level when you need to understand exactly what happened.  
+Inspect kinds, NIPs, tags, references, signatures, relay presence, raw JSON and the corresponding `nak` commands.
+
+<p align="center">
+  <img
+    src="https://github.com/user-attachments/assets/51c96075-507a-4d12-a0bd-cdf3d7022383"
+    alt="NDAK Relay Window Technical View"
+    width="100%"
+  />
+</p>
+
+<sub>
+Technical View exposes the event itself: verification, metadata, references, serialized data and the tools needed to reproduce or investigate it.
+</sub>
 
 ## What runs
 
