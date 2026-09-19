@@ -30,9 +30,9 @@ export async function scenariosSheet(pick, { edit = null, capture = null } = {})
   mode = 'list'; render();
 }
 async function refresh() { try { scenarios = (await agentJson('/scenarios')).scenarios; agentError = ''; } catch (e) { scenarios = []; agentError = e.message; } }
-async function afterEdit(id) { mode = 'list'; await refresh(); if (id) current = id; if ($('sheet').open) { $('sheetTitle').textContent = 'Scenarios'; $('sheetDone').hidden = false; $('sheetBody').innerHTML = SHELL; render(); } }
+async function afterEdit(id, { run: runNow = false } = {}) { mode = 'list'; await refresh(); if (id) current = id; if ($('sheet').open) { $('sheetTitle').textContent = 'Scenarios'; $('sheetDone').hidden = false; $('sheetBody').innerHTML = SHELL; render(); if (id && runNow) run(); } }
 const byId = id => scenarios.find(s => s.id === id);
-export function newScenario() { mode = 'edit'; editor.edit(null, afterEdit); }
+export function newScenario() { mode = 'edit'; editor.choose(afterEdit); }
 export function continueDraft() { mode = 'edit'; editor.edit(null, afterEdit); }
 export function editCurrent() { const sc = byId(current); if (sc?.definition) { mode = 'edit'; editor.edit(sc.definition, afterEdit); } }
 export function duplicateCurrent() { const sc = byId(current); if (!sc?.definition) return; const def = structuredClone(sc.definition); def.id = `${def.id}-copy`; def.title = `${def.title} copy`; mode = 'edit'; editor.edit(def, afterEdit); }
@@ -151,5 +151,6 @@ export function init() {
   $('sheetBody').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-mint-name]')) { e.preventDefault(); editor.actions['sed-mint'](e.target.nextElementSibling); } });
   $('sheetBody').addEventListener('toggle', e => { const d = e.target.closest?.('details.sdet'); if (d) rememberOpen(d.dataset.step, d.open); }, true);
   $('sheetBody').addEventListener('change', e => { const cb = e.target.closest('.scen input[data-url]'); if (cb) toggleRelay(cb.dataset.url, cb.checked); });
-  $('sheet').addEventListener('close', stopAll);
+  $('sheet').addEventListener('close', () => { stopAll(); editor.stopRecording(); });
+  $('sheetBody').addEventListener('focusin', e => editor.rememberField(e.target));
 }
