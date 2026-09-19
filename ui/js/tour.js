@@ -11,6 +11,7 @@ const listeners = [];
 export async function start(tour, index = 0) {
   stop(false);
   current = { tour, index: -1 };
+  $('tourCard').hidden = true; $('tourSpot').hidden = true;   // nothing from the last tour shows while the first step prepares
   showOverlay(true);
   document.body.classList.add('touring');
   await go(index);
@@ -60,6 +61,7 @@ function render() {
       <button class="tb-go" data-tour-act="next">${index + 1 < total ? (step.cta || 'Next') : (step.cta || 'Done')}</button>
       ${total > 1 ? `<span class="td" aria-hidden="true">${tour.steps.map((_, i) => `<i class="${i === index ? 'on' : ''}"></i>`).join('')}</span>` : ''}
     </div>`;
+  card.hidden = false;
   card.querySelector('[data-tour-act="next"]').focus({ preventScroll: true });
   place(target, step.placement);
   if (target) { target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }); requestAnimationFrame(() => place(target, step.placement)); }

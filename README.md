@@ -129,3 +129,7 @@ obelisk-relay needs a relay key of its own; `obelisk-init` writes one into `rela
 - Registry refresh: `python3 scripts/registry.py` fetches the NIP index and rewrites `ui/js/registry.js`.
 - Views render HTML strings from state; clicks are handled once, in `ui/js/app.js`, by the `data-action` attribute on the element. Views never import `app.js`; they ask for navigation through `bus.js`.
 - Interface text follows the macOS Human Interface Guidelines; where they are silent, nostrdesign.org: names over keys, relays without the protocol prefix, NIP-05 as a label, never as verification.
+
+## License
+
+MIT. See `LICENSE`. nak is by [fiatjaf](https://github.com/fiatjaf) under its own license; the relays are their own projects.

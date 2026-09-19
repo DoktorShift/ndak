@@ -124,6 +124,7 @@ on('terminal-close', () => term.toggle(false));
 on('identities', () => { renderToolbar(); renderSidebar(); });
 on('terminal', cmd => term.show(cmd));
 on('scenarios', () => scen.scenariosSheet());
+on('scenario-new', recipe => scen.scenariosSheet(null, { recipe }));
 on('scenario-capture', id => { const ev = store.events.get(id); if (ev) scen.captureEvent(ev); });
 on('relay-details', url => relaySheet(url));
 on('relay:info', ({ url }) => { if ($('relayDetails')) refreshRelaySheet(url); });

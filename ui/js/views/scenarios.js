@@ -20,12 +20,13 @@ const runs = new Map();             // scenario id -> run
 let mode = 'list';                  // 'list' or 'edit': the editor takes over the sheet body
 
 const SHELL = '<div class="scen"><aside class="slist" aria-label="Scenarios"></aside><section class="sbody"></section></div>';
-export async function scenariosSheet(pick, { edit = null, capture = null } = {}) {
+export async function scenariosSheet(pick, { edit = null, capture = null, recipe = null } = {}) {
   await refresh();
   if (!chosen.size) for (const u of relay.connectedUrls()) chosen.add(u);
   current = pick || (scenarios.some(s => s.id === current) ? current : scenarios[0]?.id || null);
   openSheet('Scenarios', SHELL, { wide: true, footer: ' ' });
   if (capture) { mode = 'edit'; editor.addStepFromEvent(capture, afterEdit); return; }
+  if (recipe) { mode = 'edit'; editor.startFrom(recipe, { quiet: true, done: afterEdit }); return; }
   if (edit) { mode = 'edit'; editor.edit(edit, afterEdit); return; }
   mode = 'list'; render();
 }

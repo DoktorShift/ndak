@@ -83,7 +83,7 @@ export const TOURS = [
     { target: '.sdet, .scen-empty', title: 'Every check, spelled out', text: 'Below the matrix each step lists its checks with expected and actual. Failed steps open by themselves. <b>Export Report</b> saves the whole run as Markdown.', placement: 'above' },
   ] },
   { id: 'editor', title: 'Scenario Editor', promise: 'Steps, what every relay should do, and the JSON beside it.', steps: [
-    { target: '.sed-steps-head, .sed-steps', title: 'A step is one event', text: 'Each step publishes one event as one of your identities: the kind, the content and the tags, written the way nak takes them. Change the recipe’s values, add a step, or press <b>Record</b> and publish from the terminal.', placement: 'right' },
+    { target: '.sed-steps-head, .sed-steps', title: 'A step is one event', text: 'Each step publishes one event as one of your identities: the kind, the content and the tags, written the way nak takes them. Change the recipe’s values, add a step, or press <b>Record</b> and publish from the terminal.', action: async () => { if (!document.querySelector('.sed-steps')) { technical(); emit('scenario-new', 'note'); } }, wait: 600, placement: 'right' },
     { target: '.sed-expsum, .sed-empty', title: 'What every relay should do', text: 'Under each step, one sentence says what is checked: accept it, keep it, return only the newest version, refuse it. <b>Change</b> opens the controls, including differences per relay.', placement: 'right' },
     { target: '[data-action="sed-save-run"]', title: 'Save and Run', text: 'Saving writes a JSON file into the scenarios folder; Save and Run also runs it right away and draws the matrix. The JSON disclosure at the bottom shows the same file, editable.', placement: 'above' },
   ] },

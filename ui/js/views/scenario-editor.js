@@ -49,10 +49,11 @@ const RECIPES = [
 export function current() { return draft; }
 /** The first screen of "New Scenario…": pick a starting point. */
 export function choose(done) { onDone = done; editingId = null; error = ''; renderChooser(); }
-export function startFrom(recipeId) {
+export function startFrom(recipeId, { quiet = false, done } = {}) {
   const r = RECIPES.find(x => x.id === recipeId); if (!r) return;
+  if (done) { onDone = done; editingId = null; error = ''; }
   const a = pick('creator'); const b = pick('subscriber', a);
-  draft = { id: '', ...r.build(a, b) }; showOnly(draft.steps[0]); persist(); render(); firstTimeTour();
+  draft = { id: '', ...r.build(a, b) }; showOnly(draft.steps[0]); persist(); render(); if (!quiet) firstTimeTour();
 }
 /** Open the editor on a definition (edit or duplicate) or on the saved draft. */
 export function edit(definition, done) {
@@ -95,7 +96,7 @@ function renderChooser() {
   if (!$('sheet').open) return;
   $('sheetTitle').textContent = 'New Scenario'; $('sheetDone').hidden = true;
   $('sheetBody').innerHTML = `<div class="sed sed-choose">
-    <p class="sed-intro">A scenario is a short list of steps. Each step publishes an event as one of your identities and says what every relay should do with it: accept it, keep it, return only the newest version, refuse it. Start from a recipe and change what you like.</p>
+    <p class="sed-intro">A scenario is a short list of steps. Each step publishes an event as one of your identities and says what every relay should do with it: accept it, keep it, return only the newest version, refuse it. Start blank, or from a recipe and change what you like.</p>
     <button class="recipe blank" data-action="sed-template" data-id="blank"><span class="plus" aria-hidden="true">+</span><span><span class="rt">Blank scenario</span><span class="rb">Start from nothing: add steps yourself, or press Record and publish from the terminal.</span></span></button>
     <div class="sect">Or start from a recipe</div>
     <div class="recipes">${RECIPES.filter(r => r.id !== 'blank').map(r => `<button class="recipe" data-action="sed-template" data-id="${r.id}"><span class="rt">${esc(r.title)}</span><span class="rb">${esc(r.blurb)}</span></button>`).join('')}
