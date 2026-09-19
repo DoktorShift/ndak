@@ -96,8 +96,9 @@ function renderChooser() {
   $('sheetTitle').textContent = 'New Scenario'; $('sheetDone').hidden = true;
   $('sheetBody').innerHTML = `<div class="sed sed-choose">
     <p class="sed-intro">A scenario is a short list of steps. Each step publishes an event as one of your identities and says what every relay should do with it: accept it, keep it, return only the newest version, refuse it. Start from a recipe and change what you like.</p>
-    <div class="sect">Start with</div>
-    <div class="recipes">${RECIPES.map(r => `<button class="recipe" data-action="sed-template" data-id="${r.id}"><span class="rt">${esc(r.title)}</span><span class="rb">${esc(r.blurb)}</span></button>`).join('')}
+    <button class="recipe blank" data-action="sed-template" data-id="blank"><span class="plus" aria-hidden="true">+</span><span><span class="rt">Blank scenario</span><span class="rb">Start from nothing: add steps yourself, or press Record and publish from the terminal.</span></span></button>
+    <div class="sect">Or start from a recipe</div>
+    <div class="recipes">${RECIPES.filter(r => r.id !== 'blank').map(r => `<button class="recipe" data-action="sed-template" data-id="${r.id}"><span class="rt">${esc(r.title)}</span><span class="rb">${esc(r.blurb)}</span></button>`).join('')}
       <div class="recipe static"><span class="rt">Something you just did</span><span class="rb">Open any event’s ··· menu and choose Add to Scenario…, or press Record in the editor and publish from the terminal.</span></div></div></div>`;
   $('sheetFoot').innerHTML = `<span class="hint">Recipes use the identities the agent holds${store.identities.length ? `: ${store.identities.map(i => i.name).join(', ')}` : '. None yet: run the seed or mint one in the sidebar first'}.</span><button class="copy" data-action="sed-cancel">Cancel</button>`;
   $('sheetFoot').hidden = false;
